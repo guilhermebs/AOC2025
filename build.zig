@@ -3,7 +3,8 @@ const std = @import("std");
 const Solution = struct { day: []const u8, file: []const u8 };
 
 pub fn build(b: *std.Build) !void {
-    const solutions = [_]Solution{ .{ .day = "hello", .file = "src/hello.zig" }, .{ .day = "day01", .file = "src/day01.zig" } };
+    const solutions = [_]Solution{ .{ .day = "hello", .file = "src/hello.zig" }, .{ .day = "day01", .file = "src/day01.zig" }, .{ .day = "day02", .file = "src/day02.zig" } };
+    const mvzr = b.dependency("mvzr", .{});
     for (solutions) |sol| {
         const exe = b.addExecutable(.{
             .name = sol.day,
@@ -13,6 +14,7 @@ pub fn build(b: *std.Build) !void {
             }),
         });
         b.installArtifact(exe);
+        exe.root_module.addImport("mvzr", mvzr.module("mvzr"));
         const run_exe = b.addRunArtifact(exe);
         const run_step = b.step(sol.day, "Run executable");
         run_step.dependOn(&run_exe.step);

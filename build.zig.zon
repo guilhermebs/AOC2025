@@ -1,0 +1,13 @@
+.{
+    // build.zig.zon
+    .name = .AOC2025,
+    .version = "0.15.2",
+    .dependencies = .{
+        .mvzr = .{
+            .url = "https://github.com/mnemnion/mvzr/archive/refs/tags/v0.3.7.tar.gz",
+            .hash = "mvzr-0.3.7-ZSOky5FtAQB2VrFQPNbXHQCFJxWTMAYEK7ljYEaMR6jt",
+        },
+    },
+    .paths = .{""},
+    .fingerprint = 0x5bc77e7b166386d1,
+}
