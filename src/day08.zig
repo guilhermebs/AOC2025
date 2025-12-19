@@ -65,12 +65,15 @@ pub fn main() !void {
     sort_indices(coordT, distances, Comp.Lt, smallest_dist);
     var idx_dist: usize = 0;
     var count_connections: usize = 0;
-    while (count_connections < num_connections) {
+    var circuit_sizes: std.ArrayList(usize) = .empty;
+    defer circuit_sizes.deinit(allocator);
+
+    while (true) {
         const idx = smallest_dist[idx_dist];
         const box_a = idx / num;
         const box_b = idx % num;
-        //std.debug.print("Box pair: {d}:({d}, {d}, {d}) {d}:({d}, {d}, {d})\n", .{ box_a, boxes[box_a].x, boxes[box_a].y, boxes[box_a].z, box_b, boxes[box_b].x, boxes[box_b].y, boxes[box_b].z });
-        std.debug.print("{d}, {d}\n", .{ box_a, box_b });
+        std.debug.print("Box pair: {d}:({d}, {d}, {d}) {d}:({d}, {d}, {d})\n", .{ box_a, boxes[box_a].x, boxes[box_a].y, boxes[box_a].z, box_b, boxes[box_b].x, boxes[box_b].y, boxes[box_b].z });
+        //std.debug.print("{d}, {d}\n", .{ box_a, box_b });
         var maybe_boxa_circuit: ?usize = null;
         var maybe_boxb_circuit: ?usize = null;
         for (0..circuits.items.len) |ci| {
@@ -102,23 +105,26 @@ pub fn main() !void {
             try circuits.append(allocator, hmap);
         }
         count_connections += 1;
+        idx_dist += 2;
         //std.debug.print("{d}\n", .{count_connections});
         //for (circuits.items) |circuit| {
         //    print_set(circuit);
         //}
-        idx_dist += 2;
+        circuit_sizes.clearRetainingCapacity();
+        for (circuits.items) |c| {
+            try circuit_sizes.append(allocator, c.count());
+        }
+        std.mem.sort(usize, circuit_sizes.items, {}, comptime std.sort.desc(usize));
+        if (count_connections == num_connections) {
+            const sol_pt1 = circuit_sizes.items[0] * circuit_sizes.items[1] * circuit_sizes.items[2];
+            std.debug.print("Part 1: {d}\n", .{sol_pt1});
+        }
+        if (circuit_sizes.items.len > 1 and circuit_sizes.items[0] == boxes.len) {
+            const sol_pt2 = boxes[box_a].x * boxes[box_b].x;
+            std.debug.print("Part 2: {d}\n", .{sol_pt2});
+            break;
+        }
     }
-    var circuit_sizes = try allocator.alloc(usize, circuits.items.len);
-    defer allocator.free(circuit_sizes);
-    for (0..circuits.items.len) |ci| {
-        circuit_sizes[ci] = circuits.items[ci].count();
-    }
-    std.mem.sort(usize, circuit_sizes, {}, comptime std.sort.desc(usize));
-    for (circuit_sizes[0..3]) |cs| {
-        std.debug.print("{d}\n", .{cs});
-    }
-    const sol_pt1 = circuit_sizes[0] * circuit_sizes[1] * circuit_sizes[2];
-    std.debug.print("Part 1: {d}\n", .{sol_pt1});
 }
 
 const Comp = enum { Gt, Lt };
