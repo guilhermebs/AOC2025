@@ -29,45 +29,59 @@ pub fn main() !void {
             });
     }
     var sol_pt1: usize = 0;
-    for (red_tiles.items) |t1| {
-        for (red_tiles.items) |t2| {
+    var areas = try allocator.alloc(u64, red_tiles.items.len * red_tiles.items.len);
+    @memset(areas, 0);
+    defer allocator.free(areas);
+    for (0..red_tiles.items.len) |ti| {
+        const t1 = red_tiles.items[ti];
+        for (ti + 1..red_tiles.items.len) |tj| {
+            const t2 = red_tiles.items[tj];
             const side1 = @abs(t1.row - t2.row) + 1;
             const side2 = @abs(t1.col - t2.col) + 1;
             const area = side1 * side2;
+            areas[ti * red_tiles.items.len + tj] = area;
             sol_pt1 = @max(sol_pt1, area);
         }
     }
     std.debug.print("Part 1: {d}\n", .{sol_pt1});
+    var indices = try allocator.alloc(usize, red_tiles.items.len * red_tiles.items.len);
+    defer allocator.free(indices);
+    for (0..indices.len) |i| indices[i] = i;
+    sort_indices(u64, areas, indices);
     var sol_pt2: usize = 0;
-    for (red_tiles.items) |t1| {
-        for (red_tiles.items) |t2| {
-            if (DEBUG) {
-                std.debug.print("t1: ({d}, {d})\n", .{ t1.col, t1.row });
-                std.debug.print("t2: ({d}, {d})\n", .{ t2.col, t2.row });
-            }
-            const edges = [_]Point{ t1, .{ .row = t1.row, .col = t2.col }, t2, .{ .row = t2.row, .col = t1.col } };
-            var is_inside: bool = true;
-            for (0..4) |i| {
-                const e1 = edges[i];
-                const e2 = edges[(i + 1) % 4];
-                if (!point_in_polygon(red_tiles.items, e1)) {
-                    is_inside = false;
-                    if (DEBUG) std.debug.print("edge ({d}, {d}) outside!\n", .{ e1.col, e1.row });
-                    break;
-                } else if (line_polygon_intersect(red_tiles.items, &[_]Point{ e1, e2 })) {
-                    if (DEBUG) std.debug.print("side ({d}, {d}), ({d}, {d}) outside!\n", .{ e1.col, e1.row, e2.col, e2.row });
-                    is_inside = false;
-                    break;
-                }
-            }
-            if (DEBUG) std.debug.print("is_inside: {b}\n", .{@intFromBool(is_inside)});
-            if (is_inside) {
-                const side1 = @abs(t1.row - t2.row) + 1;
-                const side2 = @abs(t1.col - t2.col) + 1;
-                const area = side1 * side2;
-                sol_pt2 = @max(sol_pt2, area);
+    var idx: usize = indices.len - 1;
+    while (true) {
+        const t1 = red_tiles.items[indices[idx] / red_tiles.items.len];
+        const t2 = red_tiles.items[indices[idx] % red_tiles.items.len];
+        if (DEBUG) {
+            std.debug.print("{d} {d}\n", .{ idx, areas[indices[idx]] });
+            std.debug.print("t1: ({d}, {d})\n", .{ t1.col, t1.row });
+            std.debug.print("t2: ({d}, {d})\n", .{ t2.col, t2.row });
+        }
+        const edges = [_]Point{ t1, .{ .row = t1.row, .col = t2.col }, t2, .{ .row = t2.row, .col = t1.col } };
+        var is_inside: bool = true;
+        for (0..4) |i| {
+            const e1 = edges[i];
+            const e2 = edges[(i + 1) % 4];
+            if (!point_in_polygon(red_tiles.items, e1)) {
+                is_inside = false;
+                if (DEBUG) std.debug.print("edge ({d}, {d}) outside!\n", .{ e1.col, e1.row });
+                break;
+            } else if (line_polygon_intersect(red_tiles.items, &[_]Point{ e1, e2 })) {
+                if (DEBUG) std.debug.print("side ({d}, {d}), ({d}, {d}) outside!\n", .{ e1.col, e1.row, e2.col, e2.row });
+                is_inside = false;
+                break;
             }
         }
+        if (DEBUG) std.debug.print("is_inside: {b}\n", .{@intFromBool(is_inside)});
+        if (is_inside) {
+            const side1 = @abs(t1.row - t2.row) + 1;
+            const side2 = @abs(t1.col - t2.col) + 1;
+            const area = side1 * side2;
+            sol_pt2 = @max(sol_pt2, area);
+            break;
+        }
+        idx -= 1;
     }
     std.debug.print("Part 2: {d}\n", .{sol_pt2});
 }
@@ -160,6 +174,20 @@ fn perp_line_intersect(v: []const Point, h: []const Point) bool {
         return true;
     }
     return false;
+}
+
+fn sort_indices(
+    comptime T: type,
+    values: []const T,
+    sorted_indices: []usize,
+) void {
+    const Context = struct {
+        values: []const T,
+        fn compFunc(self: @This(), i: usize, j: usize) bool {
+            return self.values[i] < self.values[j];
+        }
+    };
+    std.mem.sortUnstable(usize, sorted_indices, Context{ .values = values }, Context.compFunc);
 }
 
 test "point_in_polygon" {
